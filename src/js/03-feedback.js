@@ -1,40 +1,39 @@
 import throttle from 'lodash.throttle';
-
+const formRef = document.querySelector('.feedback-form');
 const LOCALE_STORAGE_KEY = 'feedback-form-state';
+import { save, load, remove } from './storage';
 
-const formData = localStorage.getItem(LOCALE_STORAGE_KEY) || {};
+initPage();
 
-const refs = {
-  form: document.querySelector('.feedback-form'),
-  input: document.querySelector('.feedback-form textarea'),
-  lable: document.querySelector('.feedback-form lable'),
+const onFormInput = event => {
+  const { name, value } = event.target;
+  let saveData = load(LOCALE_STORAGE_KEY);
+  saveData = saveData ? saveData : {};
+  saveData[name] = value;
+  save(LOCALE_STORAGE_KEY, saveData);
 };
 
-refs.form.addEventListener('submit', onFormSubmit);
+const throttledOnFormInput = throttle(onFormInput, 500);
+formRef.addEventListener('input', throttledOnFormInput);
 
-refs.form.addEventListener('input', throttle(onTextareaInput, 1000), evt => {
-  formData[evt.target.name] = evt.target.value;
-  const inputJson = JSON.stringify(formData);
-  localStorage.setItem(LOCALE_STORAGE_KEY, inputJson);
-  console.log(formData);
-});
-
-populateTextarea();
-
-function onFormSubmit(evt) {
-  evt.preventDefault();
-  evt.currentTarget.reset();
-  localStorage.removeItem(LOCALE_STORAGE_KEY);
-}
-
-function onTextareaInput(evt) {
-  const message = evt.target.value;
-  localStorage.setItem(LOCALE_STORAGE_KEY, message);
-}
-
-function populateTextarea() {
-  const savedMess = localStorage.getItem(LOCALE_STORAGE_KEY);
-  if (savedMess) {
-    refs.input.value = savedMess;
+function initPage() {
+  const saveData = load(LOCALE_STORAGE_KEY);
+  if (!saveData) {
+    return;
   }
+  Object.entries(saveData).forEach(([name, value]) => {
+    formRef.elements[name].value = value;
+  });
 }
+
+const handleSubmit = event => {
+  event.preventDefault();
+  const {
+    elements: { email, message },
+  } = event.currentTarget;
+  console.log({ email: email.value, message: message.value });
+  event.currentTarget.reset();
+  remove(LOCALE_STORAGE_KEY);
+};
+
+formRef.addEventListener('submit', handleSubmit);
